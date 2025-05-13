@@ -3,7 +3,7 @@ import streamlit as st
 import os # FONT_PATH_PRIMARY のチェックのため、text_analyzerに移動してもよい
 
 # ページ設定は一番最初に呼び出す
-st.set_page_config(layout="wide", page_title="テキストマイニングツール (Streamlit版)")
+st.set_page_config(layout="wide", page_title="テキストマイニングツール(oda製)")
 
 # --- モジュールのインポート ---
 from config import APP_VERSION, SESSION_KEY_MECAB_INIT, TAGGER_OPTIONS
@@ -36,7 +36,7 @@ st.markdown("日本語テキストを入力して、形態素解析、単語レ�
 # サイドバーオプションの表示と取得
 analysis_options = show_sidebar_options()
 
-default_analysis_text = """odaお手製のテキスト分析ツールです。日本語の形態素解析を行います。
+default_analysis_text = """日本語の形態素解析を行います。
 分析したいテキストを入力してください。例えば以下のように。
 
 POSの営業日は3/26になっている。
