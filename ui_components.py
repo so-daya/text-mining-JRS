@@ -81,7 +81,7 @@ def show_report_tab(morphemes_data, target_pos, stop_words):
 
             # ここで「出現数」列にミニグラフ（バー）を適用しています
             try:
-                st.dataframe(df_report.style.bar(subset=['出現数'], align='left', color='#90EE90', vmin=0) # vmin=0 を追加
+                st.dataframe(df_report.style.bar(subset=['出現数'], align='left', color='lightblue', vmin=0)
                                          .format({'出現頻度 (%)': "{:.3f}%"}))
             except Exception as e:
                 st.error(f"DataFrameのスタイリング中にエラーが発生しました: {e}")
