@@ -30,7 +30,7 @@ else:
     # else: st.session_state[SESSION_KEY_MECAB_INIT] が False の場合は initialize_mecab_tagger 内でエラー表示済み
 
 # --- Streamlit UI メイン部分 ---
-st.title("テキストマイニングツール (Streamlit版)")
+st.title("テキストマイニングツール")
 st.markdown("日本語テキストを入力して、形態素解析、単語レポート、ワードクラウド、共起ネットワーク、KWIC検索を実行します。")
 
 # サイドバーオプションの表示と取得
