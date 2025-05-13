@@ -1,0 +1,10 @@
+# requirements.txt
+streamlit
+pandas
+mecab-python3  # MeCabのPythonバインディング
+wordcloud
+matplotlib
+networkx
+pyvis
+numpy
+# 他に利用しているPythonライブラリがあればここに追加
