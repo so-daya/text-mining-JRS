@@ -2,11 +2,11 @@
 import streamlit as st
 import pandas as pd
 import re
-import os # For os.path.basename in captions
+import os
 
-from config import (DEFAULT_TARGET_POS, DEFAULT_STOP_WORDS_SET, 
+from config import (DEFAULT_TARGET_POS, GENERAL_STOP_WORDS, # GENERAL_STOP_WORDS をインポート
                     SESSION_KEY_KWIC_KEYWORD, SESSION_KEY_KWIC_MODE_IDX, SESSION_KEY_KWIC_WINDOW_VAL)
-from text_analyzer import (generate_word_report, generate_wordcloud_image, 
+from text_analyzer import (generate_word_report, generate_wordcloud_image,
                            generate_cooccurrence_network_html, perform_kwic_search)
 
 def show_sidebar_options():
@@ -14,23 +14,31 @@ def show_sidebar_options():
     st.sidebar.header("⚙️ 分析オプション")
     st.sidebar.markdown("**品詞選択 (各分析共通)**")
     
-    # 品詞選択
     pos_options = ['名詞', '動詞', '形容詞', '副詞', '感動詞', '連体詞']
     report_target_pos = st.sidebar.multiselect("単語レポート: 対象品詞", pos_options, default=DEFAULT_TARGET_POS)
-    wc_target_pos = st.sidebar.multiselect("ワードクラウド: 対象品詞", pos_options, default=DEFAULT_TARGET_POS)
-    net_target_pos = st.sidebar.multiselect("共起Net: 対象品詞", pos_options, default=DEFAULT_TARGET_POS)
+    wc_target_pos = st.sidebar.multiselect("ワードクラウド: 対象品詞", pos_options, default=DEFAULT_TARGET_POS) # DEFAULT_TARGET_POSを使用
+    net_target_pos = st.sidebar.multiselect("共起Net: 対象品詞", pos_options, default=DEFAULT_TARGET_POS) # DEFAULT_TARGET_POSを使用
 
     st.sidebar.markdown("**ストップワード設定**")
+    
+    # GENERAL_STOP_WORDS をカンマとスペース区切り文字列に変換してデフォルト値として設定
+    # 重複を除き、stripとlowerを適用しておく
+    unique_default_stopwords = sorted(list(set(word.strip().lower() for word in GENERAL_STOP_WORDS if word.strip())))
+    default_stopwords_str = ", ".join(unique_default_stopwords)
+    
     custom_stopwords_input = st.sidebar.text_area(
         "共通ストップワード (原形をカンマや改行区切りで入力):",
-        value="",  # デフォルト値を空文字列に
-        help="ここに入力した単語（原形）がストップワードとして処理されます。"
+        value=default_stopwords_str,  # ここにデフォルト値を設定
+        help="ここに入力した単語（原形）がストップワードとして処理されます。デフォルトのストップワードも含まれています。"
     )
     
-    final_stop_words = DEFAULT_STOP_WORDS_SET.copy()
+    # テキストエリアの現在の内容からストップワードセットを生成
+    # (デフォルト値 + ユーザーの編集内容が反映される)
+    final_stop_words = set()
     if custom_stopwords_input.strip():
-        custom_list = [word.strip().lower() for word in re.split(r'[,\n]', custom_stopwords_input) if word.strip()]
-        final_stop_words.update(custom_list)
+        current_stopwords_list = [word.strip().lower() for word in re.split(r'[,\n]', custom_stopwords_input) if word.strip()]
+        final_stop_words.update(current_stopwords_list)
+        
     st.sidebar.caption(f"適用される総ストップワード数: {len(final_stop_words)}")
 
     st.sidebar.markdown("---")
