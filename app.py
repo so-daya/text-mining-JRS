@@ -7,7 +7,7 @@ st.set_page_config(layout="wide", page_title="テキストマイニングツー�
 
 # --- モジュールのインポート ---
 from config import (APP_VERSION, SESSION_KEY_MECAB_INIT, TAGGER_OPTIONS,
-                    SESSION_KEY_ANALYZED_MORPHS, SESSION_KEY_ANALYZED_TEXT) # 追加キーをインポート
+                    SESSION_KEY_ANALYZED_MORPHS, SESSION_KEY_ANALYZED_TEXT)
 from text_analyzer import initialize_mecab_tagger, setup_japanese_font, perform_morphological_analysis
 from ui_components import show_sidebar_options, show_report_tab, show_wordcloud_tab, show_network_tab, show_kwic_tab
 
@@ -25,20 +25,7 @@ else:
     if SESSION_KEY_MECAB_INIT not in st.session_state :
          st.sidebar.warning("MeCab初期化状態が不明なためフォント設定をスキップします。")
 
-# --- セッションステートの初期化 (まだ存在しない場合) ---
-if SESSION_KEY_ANALYZED_MORPHS not in st.session_state:
-    st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
-if SESSION_KEY_ANALYZED_TEXT not in st.session_state:
-    st.session_state[SESSION_KEY_ANALYZED_TEXT] = "" # 初期値は空文字列
-
-# --- Streamlit UI メイン部分 ---
-st.title("テキストマイニングツール (Streamlit版)")
-st.markdown("日本語テキストを入力して、形態素解析、単語レポート、ワードクラウド、共起ネットワーク、KWIC検索を実行します。")
-
-# サイドバーオプションの表示と取得
-analysis_options = show_sidebar_options()
-
-# 初期値のテキストを定義 (前回設定したもの)
+# --- 初期値のテキストを定義 ---
 default_analysis_text = """odaお手製のテキスト分析ツールです。日本語の形態素解析を行います。
 分析したいテキストを入力してください。例えば以下のように。
 
@@ -96,45 +83,60 @@ HUB4の8番ポート抜差しするが点灯しない。
 ※資料のHUB3→HUB4に、HUB4→HUB3に内容を修正"
 釣銭機単体で全回収と補充をおこなっても変わらなければ、実際に8,000円が不足を伝達。"""
 
-# テキストエリアの現在の値を保持 (セッションステートになければデフォルト値を使用)
-# ユーザーが編集した場合、その編集内容は analyze_button が押されるまで st.session_state[SESSION_KEY_ANALYZED_TEXT] には反映されない
-# よりインタラクティブにするなら、text_area の on_change で st.session_state[SESSION_KEY_ANALYZED_TEXT] を更新する手もある
-current_text_input = st.text_area(
+# --- セッションステートの初期化 (ウィジェットのキーと分析結果用) ---
+if 'main_text_input_area_key' not in st.session_state: # テキストエリアのキー
+    st.session_state.main_text_input_area_key = default_analysis_text
+if SESSION_KEY_ANALYZED_MORPHS not in st.session_state: # 分析済み形態素
+    st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
+if SESSION_KEY_ANALYZED_TEXT not in st.session_state: # 分析済みテキスト
+    st.session_state[SESSION_KEY_ANALYZED_TEXT] = ""
+
+
+# --- Streamlit UI メイン部分 ---
+st.title("テキストマイニングツール (Streamlit版)")
+st.markdown("日本語テキストを入力して、形態素解析、単語レポート、ワードクラウド、共起ネットワーク、KWIC検索を実行します。")
+
+# サイドバーオプションの表示と取得
+analysis_options = show_sidebar_options()
+
+# メインのテキストエリア (key を使用してセッションステートで値を管理)
+st.text_area(
     "📝 分析したい日本語テキストをここに入力してください:",
     height=350,
-    value=st.session_state[SESSION_KEY_ANALYZED_TEXT] if st.session_state[SESSION_KEY_ANALYZED_TEXT] else default_analysis_text
+    key='main_text_input_area_key' # このキーでセッションステートに保存される
 )
 
 analyze_button = st.button("分析実行", type="primary", use_container_width=True)
 
 if analyze_button:
-    if not current_text_input.strip():
+    # ボタンが押されたら、現在のテキストエリアの内容 (st.session_state.main_text_input_area_key) を分析
+    text_to_analyze = st.session_state.main_text_input_area_key
+    if not text_to_analyze.strip():
         st.warning("分析するテキストを入力してください。")
         st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
-        st.session_state[SESSION_KEY_ANALYZED_TEXT] = "" # クリア
+        st.session_state[SESSION_KEY_ANALYZED_TEXT] = "" # 分析済みテキストもクリア
     elif not st.session_state.get(SESSION_KEY_MECAB_INIT, False) or tagger is None:
         st.error("MeCab Taggerが利用できません。ページを再読み込みするか、Streamlit Cloudのログを確認してください。")
         st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
-        st.session_state[SESSION_KEY_ANALYZED_TEXT] = current_text_input # 入力テキストは維持
+        # st.session_state[SESSION_KEY_ANALYZED_TEXT] は現在のテキストエリアの内容を維持
     else:
         with st.spinner("形態素解析を実行中... しばらくお待ちください。"):
-            morphemes_result = perform_morphological_analysis(current_text_input, TAGGER_OPTIONS)
+            morphemes_result = perform_morphological_analysis(text_to_analyze, TAGGER_OPTIONS)
             if not morphemes_result:
                 st.error("形態素解析に失敗したか、結果が空です。入力テキストを確認してください。")
                 st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
-                st.session_state[SESSION_KEY_ANALYZED_TEXT] = current_text_input # 入力テキストは維持
+                # st.session_state[SESSION_KEY_ANALYZED_TEXT] は現在のテキストエリアの内容を維持
             else:
                 st.success(f"形態素解析が完了しました。総形態素数: {len(morphemes_result)}")
                 # 形態素解析結果と、その元となったテキストをセッションステートに保存
                 st.session_state[SESSION_KEY_ANALYZED_MORPHS] = morphemes_result
-                st.session_state[SESSION_KEY_ANALYZED_TEXT] = current_text_input
+                st.session_state[SESSION_KEY_ANALYZED_TEXT] = text_to_analyze
 
-# --- 分析結果の表示 ---
-# セッションステートに形態素解析結果があれば、タブを表示
+# --- 分析結果の表示エリア ---
+# セッションステートに有効な形態素解析結果があれば、タブを表示
 if st.session_state.get(SESSION_KEY_ANALYZED_MORPHS) is not None:
     st.markdown("---") # 結果表示の前に区切り線
 
-    # セッションステートから形態素解析結果と分析対象テキストを取得
     morphemes_to_display = st.session_state[SESSION_KEY_ANALYZED_MORPHS]
     analyzed_text_for_network = st.session_state[SESSION_KEY_ANALYZED_TEXT]
 
@@ -153,19 +155,20 @@ if st.session_state.get(SESSION_KEY_ANALYZED_MORPHS) is not None:
                            analysis_options["stop_words"])
     with tab_network:
         show_network_tab(morphemes_to_display,
-                         analyzed_text_for_network, # セッションから取得したテキストを使用
-                         TAGGER_OPTIONS, # キャッシュキー用
+                         analyzed_text_for_network,
+                         TAGGER_OPTIONS,
                          font_path, font_name,
                          analysis_options["net_pos"],
                          analysis_options["stop_words"],
                          analysis_options["node_min_freq"],
                          analysis_options["edge_min_freq"])
     with tab_kwic:
-        show_kwic_tab(morphemes_to_display) # KWICタブには形態素リストのみ渡す
+        show_kwic_tab(morphemes_to_display)
 else:
-    # 形態素解析結果がまだない場合（初回起動時やエラーでクリアされた場合など）
-    if not analyze_button: # ボタンがまだ押されていなければ、初期メッセージを表示
-        st.info("分析したいテキストを入力し、「分析実行」ボタンを押してください。")
+    # analyze_button が押されたかどうかに関わらず、解析結果がなければこのメッセージが表示される
+    # (ただし、ボタン押下直後にエラーで結果がNoneになった場合もここに来る)
+    # if not analyze_button: # この条件は不要になるか、あるいは挙動に合わせて調整
+    st.info("分析したいテキストを入力し、「分析実行」ボタンを押してください。")
 
 
 # --- フッター情報 ---
