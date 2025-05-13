@@ -1,42 +1,45 @@
 # app.py
 import streamlit as st
-import os # FONT_PATH_PRIMARY のチェックのため、text_analyzerに移動してもよい
+import os
 
 # ページ設定は一番最初に呼び出す
-st.set_page_config(layout="wide", page_title="テキストマイニングツール(oda製)")
+st.set_page_config(layout="wide", page_title="テキストマイニングツール (Streamlit版)")
 
 # --- モジュールのインポート ---
-from config import APP_VERSION, SESSION_KEY_MECAB_INIT, TAGGER_OPTIONS
+from config import (APP_VERSION, SESSION_KEY_MECAB_INIT, TAGGER_OPTIONS,
+                    SESSION_KEY_ANALYZED_MORPHS, SESSION_KEY_ANALYZED_TEXT) # 追加キーをインポート
 from text_analyzer import initialize_mecab_tagger, setup_japanese_font, perform_morphological_analysis
 from ui_components import show_sidebar_options, show_report_tab, show_wordcloud_tab, show_network_tab, show_kwic_tab
 
 # --- MeCab Tagger とフォントの初期化 ---
-# Taggerの初期化（キャッシュされる）
 tagger = initialize_mecab_tagger()
 if tagger:
     st.session_state[SESSION_KEY_MECAB_INIT] = True
 else:
     st.session_state[SESSION_KEY_MECAB_INIT] = False
 
-# 日本語フォントの設定（キャッシュされる）
-# MeCab初期化後にフォント設定を行う (エラーメッセージがMeCab依存のメッセージより後に出るように)
 font_path, font_name = None, None
 if st.session_state.get(SESSION_KEY_MECAB_INIT, False):
-    font_path, font_name = setup_japanese_font() # font_path_final, font_name_final を受け取る
+    font_path, font_name = setup_japanese_font()
 else:
-    # MeCabが初期化できていない場合は、フォント設定を試みない（エラーメッセージが重複しないように）
-    if SESSION_KEY_MECAB_INIT not in st.session_state : # 初回実行時などキーが存在しない場合
+    if SESSION_KEY_MECAB_INIT not in st.session_state :
          st.sidebar.warning("MeCab初期化状態が不明なためフォント設定をスキップします。")
-    # else: st.session_state[SESSION_KEY_MECAB_INIT] が False の場合は initialize_mecab_tagger 内でエラー表示済み
+
+# --- セッションステートの初期化 (まだ存在しない場合) ---
+if SESSION_KEY_ANALYZED_MORPHS not in st.session_state:
+    st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
+if SESSION_KEY_ANALYZED_TEXT not in st.session_state:
+    st.session_state[SESSION_KEY_ANALYZED_TEXT] = "" # 初期値は空文字列
 
 # --- Streamlit UI メイン部分 ---
-st.title("テキストマイニングツール")
+st.title("テキストマイニングツール (Streamlit版)")
 st.markdown("日本語テキストを入力して、形態素解析、単語レポート、ワードクラウド、共起ネットワーク、KWIC検索を実行します。")
 
 # サイドバーオプションの表示と取得
 analysis_options = show_sidebar_options()
 
-default_analysis_text = """oda製ツールですご容赦ください。日本語の形態素解析を行います。
+# 初期値のテキストを定義 (前回設定したもの)
+default_analysis_text = """odaお手製のテキスト分析ツールです。日本語の形態素解析を行います。
 分析したいテキストを入力してください。例えば以下のように。
 
 POSの営業日は3/26になっている。
@@ -93,55 +96,77 @@ HUB4の8番ポート抜差しするが点灯しない。
 ※資料のHUB3→HUB4に、HUB4→HUB3に内容を修正"
 釣銭機単体で全回収と補充をおこなっても変わらなければ、実際に8,000円が不足を伝達。"""
 
-main_text_input = st.text_area(
+# テキストエリアの現在の値を保持 (セッションステートになければデフォルト値を使用)
+# ユーザーが編集した場合、その編集内容は analyze_button が押されるまで st.session_state[SESSION_KEY_ANALYZED_TEXT] には反映されない
+# よりインタラクティブにするなら、text_area の on_change で st.session_state[SESSION_KEY_ANALYZED_TEXT] を更新する手もある
+current_text_input = st.text_area(
     "📝 分析したい日本語テキストをここに入力してください:",
-    height=250,
-    value=default_analysis_text
+    height=350,
+    value=st.session_state[SESSION_KEY_ANALYZED_TEXT] if st.session_state[SESSION_KEY_ANALYZED_TEXT] else default_analysis_text
 )
 
 analyze_button = st.button("分析実行", type="primary", use_container_width=True)
 
 if analyze_button:
-    if not main_text_input.strip():
+    if not current_text_input.strip():
         st.warning("分析するテキストを入力してください。")
+        st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
+        st.session_state[SESSION_KEY_ANALYZED_TEXT] = "" # クリア
     elif not st.session_state.get(SESSION_KEY_MECAB_INIT, False) or tagger is None:
         st.error("MeCab Taggerが利用できません。ページを再読み込みするか、Streamlit Cloudのログを確認してください。")
+        st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
+        st.session_state[SESSION_KEY_ANALYZED_TEXT] = current_text_input # 入力テキストは維持
     else:
         with st.spinner("形態素解析を実行中... しばらくお待ちください。"):
-            # Taggerの設定が変わらない限り、perform_morphological_analysisはテキスト入力が同じならキャッシュされた結果を返す
-            morphemes = perform_morphological_analysis(main_text_input, TAGGER_OPTIONS) 
-        
-        if not morphemes:
-            st.error("形態素解析に失敗したか、結果が空です。入力テキストを確認してください。")
-        else:
-            st.success(f"形態素解析が完了しました。総形態素数: {len(morphemes)}")
-            st.markdown("---")
+            morphemes_result = perform_morphological_analysis(current_text_input, TAGGER_OPTIONS)
+            if not morphemes_result:
+                st.error("形態素解析に失敗したか、結果が空です。入力テキストを確認してください。")
+                st.session_state[SESSION_KEY_ANALYZED_MORPHS] = None
+                st.session_state[SESSION_KEY_ANALYZED_TEXT] = current_text_input # 入力テキストは維持
+            else:
+                st.success(f"形態素解析が完了しました。総形態素数: {len(morphemes_result)}")
+                # 形態素解析結果と、その元となったテキストをセッションステートに保存
+                st.session_state[SESSION_KEY_ANALYZED_MORPHS] = morphemes_result
+                st.session_state[SESSION_KEY_ANALYZED_TEXT] = current_text_input
 
-            tab_report, tab_wc, tab_network, tab_kwic = st.tabs([
-                "📊 単語出現レポート", "☁️ ワードクラウド", "🕸️ 共起ネットワーク", "🔍 KWIC検索"
-            ])
+# --- 分析結果の表示 ---
+# セッションステートに形態素解析結果があれば、タブを表示
+if st.session_state.get(SESSION_KEY_ANALYZED_MORPHS) is not None:
+    st.markdown("---") # 結果表示の前に区切り線
 
-            with tab_report:
-                show_report_tab(morphemes, 
-                                analysis_options["report_pos"], 
-                                analysis_options["stop_words"])
-            
-            with tab_wc:
-                show_wordcloud_tab(morphemes, 
-                                   font_path, 
-                                   analysis_options["wc_pos"], 
-                                   analysis_options["stop_words"])
-            
-            with tab_network:
-                show_network_tab(morphemes, main_text_input, TAGGER_OPTIONS, # TAGGER_OPTIONSはキャッシュキー用
-                                 font_path, font_name,
-                                 analysis_options["net_pos"], 
-                                 analysis_options["stop_words"],
-                                 analysis_options["node_min_freq"],
-                                 analysis_options["edge_min_freq"])
+    # セッションステートから形態素解析結果と分析対象テキストを取得
+    morphemes_to_display = st.session_state[SESSION_KEY_ANALYZED_MORPHS]
+    analyzed_text_for_network = st.session_state[SESSION_KEY_ANALYZED_TEXT]
 
-            with tab_kwic:
-                show_kwic_tab(morphemes)
+    tab_report, tab_wc, tab_network, tab_kwic = st.tabs([
+        "📊 単語出現レポート", "☁️ ワードクラウド", "🕸️ 共起ネットワーク", "🔍 KWIC検索"
+    ])
+
+    with tab_report:
+        show_report_tab(morphemes_to_display,
+                        analysis_options["report_pos"],
+                        analysis_options["stop_words"])
+    with tab_wc:
+        show_wordcloud_tab(morphemes_to_display,
+                           font_path,
+                           analysis_options["wc_pos"],
+                           analysis_options["stop_words"])
+    with tab_network:
+        show_network_tab(morphemes_to_display,
+                         analyzed_text_for_network, # セッションから取得したテキストを使用
+                         TAGGER_OPTIONS, # キャッシュキー用
+                         font_path, font_name,
+                         analysis_options["net_pos"],
+                         analysis_options["stop_words"],
+                         analysis_options["node_min_freq"],
+                         analysis_options["edge_min_freq"])
+    with tab_kwic:
+        show_kwic_tab(morphemes_to_display) # KWICタブには形態素リストのみ渡す
+else:
+    # 形態素解析結果がまだない場合（初回起動時やエラーでクリアされた場合など）
+    if not analyze_button: # ボタンがまだ押されていなければ、初期メッセージを表示
+        st.info("分析したいテキストを入力し、「分析実行」ボタンを押してください。")
+
 
 # --- フッター情報 ---
 st.sidebar.markdown("---")
