@@ -65,7 +65,7 @@ GENERAL_STOP_WORDS = [
 
 # --- 共起ネットワークPyvisオプション ---
 PYVIS_OPTIONS_STR = """
-var options = {
+{
   "interaction": {
     "navigationButtons": false,
     "keyboard": {
@@ -93,7 +93,7 @@ var options = {
       "iterations": 500
     }
   }
-};
+}
 """
 
 # --- Streamlit Session State Keys ---
