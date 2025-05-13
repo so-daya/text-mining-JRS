@@ -1,4 +1,6 @@
+# packages.txt
 mecab
 libmecab-dev
 mecab-ipadic-utf8
 swig
+fonts-ipafont-gothic
