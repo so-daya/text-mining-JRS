@@ -36,7 +36,7 @@ st.markdown("日本語テキストを入力して、形態素解析、単語レ�
 # サイドバーオプションの表示と取得
 analysis_options = show_sidebar_options()
 
-default_analysis_text = """日本語の形態素解析を行います。
+default_analysis_text = """oda製ツールですご容赦ください。日本語の形態素解析を行います。
 分析したいテキストを入力してください。例えば以下のように。
 
 POSの営業日は3/26になっている。
