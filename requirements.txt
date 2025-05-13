@@ -1,10 +1,8 @@
-# requirements.txt
 streamlit
+mecab-python3==1.0.9
 pandas
-mecab-python3  # MeCabのPythonバインディング
 wordcloud
 matplotlib
 networkx
 pyvis
 numpy
-# 他に利用しているPythonライブラリがあればここに追加
