@@ -62,9 +62,30 @@ def show_report_tab(morphemes_data, target_pos, stop_words):
             morphemes_data, target_pos, stop_words
         )
         st.caption(f"総形態素数: {total_morphs} | レポート対象の異なり語数: {len(df_report)} | レポート対象の延べ語数: {total_target_morphs}")
+        
         if not df_report.empty:
-            st.dataframe(df_report.style.bar(subset=['出現数'], align='left', color='#90EE90')
-                                     .format({'出現頻度 (%)': "{:.3f}%"}))
+            # --- デバッグ情報表示ここから ---
+            st.write("--- デバッグ情報 ---")
+            if '出現数' in df_report.columns:
+                st.write(f"「出現数」列のデータ型: {df_report['出現数'].dtype}")
+                st.write("「出現数」列の最初の5件の値:")
+                st.write(df_report['出現数'].head())
+                st.write("「出現数」列の統計情報:")
+                st.write(df_report['出現数'].describe())
+                # 0やマイナスの値がないか確認 (style.bar は正の値を想定)
+                st.write(f"「出現数」列に0以下の値が存在するか: {(df_report['出現数'] <= 0).any()}")
+            else:
+                st.write("エラー: DataFrameに「出現数」列が存在しません。")
+            st.write("--- デバッグ情報ここまで ---")
+            # --- デバッグ情報表示ここまで ---
+
+            # ここで「出現数」列にミニグラフ（バー）を適用しています
+            try:
+                st.dataframe(df_report.style.bar(subset=['出現数'], align='left', color='#90EE90', vmin=0) # vmin=0 を追加
+                                         .format({'出現頻度 (%)': "{:.3f}%"}))
+            except Exception as e:
+                st.error(f"DataFrameのスタイリング中にエラーが発生しました: {e}")
+                st.dataframe(df_report) # エラー時はスタイルなしで表示
         else:
             st.info("レポート対象の単語が見つかりませんでした。")
 
