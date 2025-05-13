@@ -95,7 +95,7 @@ HUB4の8番ポート抜差しするが点灯しない。
 
 main_text_input = st.text_area(
     "📝 分析したい日本語テキストをここに入力してください:",
-    height=350,  # 長いテキストなので高さを少し増やしました (任意で調整してください)
+    height=250,
     value=default_analysis_text
 )
 
