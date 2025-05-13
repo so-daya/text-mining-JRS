@@ -3,7 +3,7 @@ import streamlit as st
 import os
 
 # ページ設定は一番最初に呼び出す
-st.set_page_config(layout="wide", page_title="テキストマイニングツール (Streamlit版)")
+st.set_page_config(layout="wide", page_title="テキストマイニングツール")
 
 # --- モジュールのインポート ---
 from config import (APP_VERSION, SESSION_KEY_MECAB_INIT, TAGGER_OPTIONS,
@@ -173,4 +173,4 @@ else:
 
 # --- フッター情報 ---
 st.sidebar.markdown("---")
-st.sidebar.info(f"テキストマイニングツール (Streamlit版) v{APP_VERSION}")
+st.sidebar.info(f"テキストマイニングツールv{APP_VERSION}")
