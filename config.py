@@ -101,8 +101,8 @@ SESSION_KEY_MECAB_INIT = 'mecab_tagger_initialized'
 SESSION_KEY_KWIC_KEYWORD = 'kwic_keyword'
 SESSION_KEY_KWIC_MODE_IDX = 'kwic_mode_idx'
 SESSION_KEY_KWIC_WINDOW_VAL = 'kwic_window_val'
-SESSION_KEY_ANALYZED_MORPHS = 'analyzed_morphemes' # 形態素解析結果を保存するキー
-SESSION_KEY_ANALYZED_TEXT = 'analyzed_text_input' # 分析対象テキストを保存するキー (追加)
+SESSION_KEY_ANALYZED_MORPHS = 'analyzed_morphemes'
+SESSION_KEY_ANALYZED_TEXT = 'analyzed_text_input'
 
 # --- アプリケーション情報 ---
 APP_VERSION = "0.3.3" # バージョン更新
