@@ -1,0 +1,5 @@
+# packages.txt
+mecab
+libmecab-dev
+mecab-ipadic-utf8
+swig # mecab-python3 のビルドに必要になる場合があります
