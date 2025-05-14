@@ -2,10 +2,8 @@
 import streamlit as st
 import os
 
-# ページ設定は一番最初に呼び出す (page_titleを修正)
 st.set_page_config(layout="wide", page_title="テキストマイニングツール")
 
-# --- モジュールのインポート ---
 from config import (APP_VERSION, SESSION_KEY_MECAB_INIT, TAGGER_OPTIONS,
                     SESSION_KEY_ANALYZED_MORPHS, SESSION_KEY_ANALYZED_TEXT,
                     TAB_NAME_REPORT, TAB_NAME_WC, TAB_NAME_NETWORK, TAB_NAME_KWIC,
@@ -13,12 +11,9 @@ from config import (APP_VERSION, SESSION_KEY_MECAB_INIT, TAGGER_OPTIONS,
 from text_analyzer import initialize_mecab_tagger, setup_japanese_font, perform_morphological_analysis
 from ui_components import show_sidebar_options, show_report_tab, show_wordcloud_tab, show_network_tab, show_kwic_tab
 
-# --- MeCab Tagger とフォントの初期化 ---
 tagger = initialize_mecab_tagger()
-if tagger:
-    st.session_state[SESSION_KEY_MECAB_INIT] = True
-else:
-    st.session_state[SESSION_KEY_MECAB_INIT] = False
+if tagger: st.session_state[SESSION_KEY_MECAB_INIT] = True
+else: st.session_state[SESSION_KEY_MECAB_INIT] = False
 
 font_path, font_name = None, None
 if st.session_state.get(SESSION_KEY_MECAB_INIT, False):
@@ -27,7 +22,6 @@ else:
     if SESSION_KEY_MECAB_INIT not in st.session_state :
          st.sidebar.warning("MeCab初期化状態が不明なためフォント設定をスキップします。")
 
-# --- 初期値のテキスト ---
 default_analysis_text = """odaお手製のテキスト分析ツールです。日本語の形態素解析を行います。
 分析したいテキストを入力してください。例えば以下のように。
 
@@ -83,27 +77,8 @@ HUB4の8番ポート抜差しするが点灯しない。
 会計していただき、呼び出しPCも番号表示したとのこと。
 使用していただき、障害時連絡していただくよう伝える。
 ※資料のHUB3→HUB4に、HUB4→HUB3に内容を修正"
-釣銭機単体で全回収と補充をおこなっても変わらなければ、実際に8,000円が不足を伝達。
-"リモートで確認すると、1万円と5千円の在高にそれぞれ5031枚が入力され、そのまま不足になっている。釣銭準備金は0円。
-2番POSはキャッシュレスで釣銭機は接続していないため、誤って手入力した可能性が高い旨を説明。
-上記枚数を削除し、過不足0円を確認。これで問題ないか問われたが、コールセンターでは問題ないか判断はできないため、店舗で判断いただくよう伝達。"
-"復旧開始とリセットでエラーを解除している。
-またエラーコードは不明とのこと。営業中にエラーになることはないとのことで、一旦紙幣搬送路の清掃とスタッカーの清掃で様子見を依頼。
-再発時はエラーコードを確認して連絡していただくよう伝達。"
-レシート上は多い金額が釣銭と表記されるが、在高には影響しないため、問題無い旨説明。
-"リモートにて確認。キャッシュレス決済のため釣銭機は使用していない。
-またキーボードがないため点検画面で数字は入力できないとのこと。
-昨日は2番POSで発生しているため原因を伺いたい。
+釣銭機単体で全回収と補充をおこなっても変わらなければ、実際に8,000円が不足を伝達。"""
 
-点検画面でQRのスキャンがされた可能性を説明し、一旦店舗で注意してみるとのこと。
-改善がなければデータ採取で調査となる旨を伝達。"
-"電源OFFと起動手順については認識しているとのこと。
-不明な場合は連絡を依頼。
-→4/17 7:58　店舗より連絡。停電は復旧したが、呼び出しPCの表示ができない。
-リモートにて呼び出しPCの設定を実施。"
-"""
-
-# --- セッションステートの初期化 ---
 if 'main_text_input_area_key' not in st.session_state:
     st.session_state.main_text_input_area_key = default_analysis_text
 if SESSION_KEY_ANALYZED_MORPHS not in st.session_state:
@@ -113,8 +88,6 @@ if SESSION_KEY_ANALYZED_TEXT not in st.session_state:
 if SESSION_KEY_ACTIVE_TAB not in st.session_state:
     st.session_state[SESSION_KEY_ACTIVE_TAB] = DEFAULT_ACTIVE_TAB
 
-
-# --- UI メイン部分 ---
 st.title("テキストマイニングツール")
 st.markdown("日本語テキストを入力して、形態素解析、単語レポート、ワードクラウド、共起ネットワーク、KWIC検索を実行します。")
 
@@ -122,8 +95,7 @@ analysis_options = show_sidebar_options()
 
 st.text_area(
     "📝 分析したい日本語テキストをここに入力してください:",
-    height=250,
-    key='main_text_input_area_key'
+    height=350, key='main_text_input_area_key', max_chars=50000
 )
 
 analyze_button = st.button("分析実行", type="primary", use_container_width=True)
@@ -149,21 +121,16 @@ if analyze_button:
                 st.session_state[SESSION_KEY_ANALYZED_TEXT] = text_to_analyze
                 st.session_state[SESSION_KEY_ACTIVE_TAB] = DEFAULT_ACTIVE_TAB
 
-# --- 分析結果の表示エリア ---
 if st.session_state.get(SESSION_KEY_ANALYZED_MORPHS) is not None:
     st.markdown("---")
-
     morphemes_to_display = st.session_state[SESSION_KEY_ANALYZED_MORPHS]
-    analyzed_text_for_network = st.session_state[SESSION_KEY_ANALYZED_TEXT]
+    analyzed_text_for_tabs = st.session_state[SESSION_KEY_ANALYZED_TEXT] # ★分析に使ったテキストを取得
 
     tab_names_map = {
-        TAB_NAME_REPORT: "btn_report_tab",
-        TAB_NAME_WC: "btn_wc_tab",
-        TAB_NAME_NETWORK: "btn_network_tab",
-        TAB_NAME_KWIC: "btn_kwic_tab"
+        TAB_NAME_REPORT: "btn_report_tab", TAB_NAME_WC: "btn_wc_tab",
+        TAB_NAME_NETWORK: "btn_network_tab", TAB_NAME_KWIC: "btn_kwic_tab"
     }
     tab_keys = list(tab_names_map.keys())
-
     cols = st.columns(len(tab_keys))
     for i, tab_name_key in enumerate(tab_keys):
         button_type = "primary" if st.session_state.get(SESSION_KEY_ACTIVE_TAB) == tab_name_key else "secondary"
@@ -174,17 +141,19 @@ if st.session_state.get(SESSION_KEY_ANALYZED_MORPHS) is not None:
     active_tab_to_render = st.session_state.get(SESSION_KEY_ACTIVE_TAB, DEFAULT_ACTIVE_TAB) 
 
     if active_tab_to_render == TAB_NAME_REPORT:
-        show_report_tab(morphemes_to_display,
+        show_report_tab(morphemes_to_display, 
+                        analyzed_text_for_tabs, # ★生テキストを渡す
                         analysis_options["report_pos"],
                         analysis_options["stop_words"])
     elif active_tab_to_render == TAB_NAME_WC:
-        show_wordcloud_tab(morphemes_to_display,
+        show_wordcloud_tab(morphemes_to_display, 
+                           analyzed_text_for_tabs, # ★生テキストを渡す
                            font_path,
                            analysis_options["wc_pos"],
                            analysis_options["stop_words"])
     elif active_tab_to_render == TAB_NAME_NETWORK:
         show_network_tab(morphemes_to_display,
-                         analyzed_text_for_network,
+                         analyzed_text_for_tabs, # ★生テキストを渡す (元々渡していた)
                          TAGGER_OPTIONS,
                          font_path, font_name,
                          analysis_options["net_pos"],
@@ -196,6 +165,5 @@ if st.session_state.get(SESSION_KEY_ANALYZED_MORPHS) is not None:
 else:
     st.info("分析したいテキストを入力し、「分析実行」ボタンを押してください。")
 
-# --- フッター情報 ---
 st.sidebar.markdown("---")
-st.sidebar.info(f"テキストマイニングツール v{APP_VERSION}") # ★「(Streamlit版)」を削除
+st.sidebar.info(f"テキストマイニングツール v{APP_VERSION}")
